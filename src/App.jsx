@@ -92,7 +92,7 @@ export default function Game() {
       <div className="history-container">
       {moveHistory.map((moveLocation, index) => 
         <p className="history-text"key={index}>{index + 1}. {index % 2 == 0 ? <span className="red">Red</span> : <span className="yellow">Yellow</span>} has placed a token on <span className="blue">{moveLocation}</span></p>
-      )}
+      ).reverse()}
       </div>
     </div>
     </>

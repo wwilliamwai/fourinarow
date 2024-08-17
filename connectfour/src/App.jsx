@@ -12,6 +12,8 @@ function Square({onClick, color}) {
 function Board({squares, setSquares, isRedTurn, setRedTurn, isGameOver, setGameOver, updateHistory}) {
   const rowToNumber = "654321"
   const colToLetter = "ABCDEFG";
+  let winningTokens = [];
+
   function handleClick(rowIndex, columnIndex) {
     if (isGameOver) {
       return;
@@ -26,7 +28,11 @@ function Board({squares, setSquares, isRedTurn, setRedTurn, isGameOver, setGameO
     const copySquares = squares.map((row) => row.slice());
     copySquares[rowIndex][columnIndex] = isRedTurn ? 'red' : 'yellow'; 
     updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(rowIndex));
-    if (checkGameOver(copySquares)) {
+    if (checkGameOver(copySquares, winningTokens)) {
+
+      winningTokens.forEach((location) => {
+        copySquares[location[0]][location[1]] = "lightgreen";
+      });
       setGameOver(true);
     }
     setSquares(copySquares);
@@ -92,17 +98,18 @@ export default function Game() {
     </>
   )
 }
-function checkGameOver(squares) {
+function checkGameOver(squares, winningTokens) {
   for(let row = 0; row < squares.length; row++) {
     for(let col = 0; col < squares[0].length; col++) {
-      if (isVerticalFour(squares, row, col) || isHorizontalFour(squares, row, col) || isDiagonalFour(squares, row, col)) {
+      if (isVerticalFour(squares, row, col, winningTokens) || isHorizontalFour(squares, row, col, winningTokens) || isDiagonalFour(squares, row, col, winningTokens)) {
+        console.log("the game is over")
         return true;
       }
     }
   }
   return false;
 }
-function isVerticalFour(squares, targetRow, targetCol) {
+function isVerticalFour(squares, targetRow, targetCol, winningTokens) {
   if (squares[targetRow][targetCol] === 'whitesmoke') {
     return false;
   }
@@ -110,17 +117,20 @@ function isVerticalFour(squares, targetRow, targetCol) {
   // check vertically if count === 4
   for (let row = targetRow - 3; row <= targetRow + 3; row++) {
     if (row >= 0 && row < squares.length && squares[row][targetCol] === squares[targetRow][targetCol]) {
+      winningTokens.push([row, targetCol]);
       count++;
       if (count === 4) {
+        console.log("vertical win");
         return true;
       }
     } else {
+    winningTokens.length = 0;
     count = 0;
     }
   }
   return false;
 }
-function isHorizontalFour(squares, targetRow, targetCol) {
+function isHorizontalFour(squares, targetRow, targetCol, winningTokens) {
   if (squares[targetRow][targetCol] === 'whitesmoke') {
     return false;
   } 
@@ -128,17 +138,20 @@ function isHorizontalFour(squares, targetRow, targetCol) {
   // check horizontally if count == 4
   for (let col = targetCol - 3; col <= targetCol + 3; col++) {
     if (col >= 0 && col < squares[0].length && squares[targetRow][col] === squares[targetRow][targetCol]) {
+      winningTokens.push([targetRow, col]);
       count++;
       if (count === 4) {
+        console.log("horizontal win");
         return true;
       }
     } else {
+      winningTokens.length = 0;
       count = 0;
     }
   }
   return false;
 }
-function isDiagonalFour(squares, targetRow, targetCol) {
+function isDiagonalFour(squares, targetRow, targetCol, winningTokens) {
   if (squares[targetRow][targetCol] === 'whitesmoke') {
     return false;
   }
@@ -147,22 +160,30 @@ function isDiagonalFour(squares, targetRow, targetCol) {
   for (let i = -3; i <= 3; i++) {
     if (targetRow + i >= 0 && targetCol + i >= 0 && targetRow + i < squares.length && targetCol + i < squares[0].length 
       && squares[targetRow + i][targetCol + i] === squares[targetRow][targetCol] ) {
+        winningTokens.push([targetRow + i,targetCol + i])
         count++;
         if (count === 4) {
+          console.log("diagonal win");
           return true;
         }
     } else {
+      winningTokens.length = 0;
       count = 0;
     }
   }
+  winningTokens.length = 0;
+  count = 0;
   for (let i = -3; i <= 3; i++) {
     if (targetRow - i >= 0 && targetCol + i >= 0 && targetRow - i < squares.length && targetCol + i < squares[0].length
       && squares[targetRow - i][targetCol + i] === squares[targetRow][targetCol]) {
+        winningTokens.push([targetRow - i,targetCol + i])
         count++;
         if (count === 4) {
+          console.log("diagonal win");
           return true;
         }
       } else {
+        winningTokens.length = 0;
         count = 0;
       }
   }

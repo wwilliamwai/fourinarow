@@ -9,7 +9,9 @@ function Square({onClick, color}) {
     <Circle onClick={onClick} color={color}/>
   </div>
 }
-function Board({squares, setSquares, isRedTurn, setRedTurn, isGameOver, setGameOver}) {
+function Board({squares, setSquares, isRedTurn, setRedTurn, isGameOver, setGameOver, updateHistory}) {
+  const rowToNumber = "654321"
+  const colToLetter = "ABCDEFG";
   function handleClick(rowIndex, columnIndex) {
     if (isGameOver) {
       return;
@@ -23,7 +25,7 @@ function Board({squares, setSquares, isRedTurn, setRedTurn, isGameOver, setGameO
     }
     const copySquares = squares.map((row) => row.slice());
     copySquares[rowIndex][columnIndex] = isRedTurn ? 'red' : 'yellow'; 
-
+    updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(rowIndex));
     if (checkGameOver(copySquares)) {
       setGameOver(true);
     }
@@ -48,14 +50,43 @@ export default function Game() {
   const [squares, setSquares] = useState(Array(6).fill().map(() => Array(7).fill('whitesmoke')));
   const [isRedTurn, setRedTurn] = useState(true);
   const [isGameOver, setGameOver] = useState(false);
+  const [moveHistory, setHistory] = useState([]);
+
+  const updateHistory = (moveLocation) => {
+    const copyHistory = moveHistory.slice();
+    copyHistory.push(moveLocation);
+    setHistory(copyHistory);
+  }
 
   return (
     <>
-    <div class="game">
+    <div className="game">
       {isGameOver ? isRedTurn ? <h1 className="game-over yellow">Yellow Wins!</h1> : <h1 className="game-over red">Red Wins!</h1> : "" }
       {!isGameOver ? isRedTurn ? <h1 className="next-player">Next Player: <span className="red">Red</span></h1> : <h1 className="next-player">Next Player: <span className="yellow">Yellow</span></h1> : ""}
+      <div className="number-col">
+        <p>6</p>
+        <p>5</p>
+        <p>4</p>
+        <p>3</p>
+        <p>2</p>
+        <p>1</p>
+      </div>
+      <div className="letter-row">
+        <p className="letter">A</p>
+        <p className="letter">B</p>
+        <p className="letter">C</p>
+        <p className="letter">D</p>
+        <p className="letter">E</p>
+        <p className="letter">F</p>
+        <p className="letter">G</p>
+      </div>
       <div className="board">
-        <Board squares={squares} setSquares={setSquares} isRedTurn={isRedTurn} setRedTurn={setRedTurn} isGameOver={isGameOver} setGameOver={setGameOver}/>
+        <Board squares={squares} setSquares={setSquares} isRedTurn={isRedTurn} setRedTurn={setRedTurn} isGameOver={isGameOver} setGameOver={setGameOver} updateHistory={updateHistory}/>
+      </div>
+      <div className="history-container">
+      {moveHistory.map((moveLocation, index) => 
+        <p className="history-text"key={index}>{index + 1}. {index % 2 == 0 ? <span className="red">Red</span> : <span className="yellow">Yellow</span>} has placed a token on <span className="blue">{moveLocation}</span></p>
+      )}
       </div>
     </div>
     </>

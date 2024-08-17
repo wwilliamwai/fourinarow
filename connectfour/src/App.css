@@ -5,7 +5,8 @@ body {
   background-color: #1e1e19;
 }
 .game {
-  margin: 0 auto;
+  position: absolute;
+  left: 80px;
   width: 570px;
 }
 .game-over {
@@ -24,12 +25,47 @@ body {
 .yellow {
   color: gold;
 }
+.blue {
+  color: blue;
+}
+.number-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  text-align: center;
+  position: absolute;
+  left: -30px;
+  width: 30px;
+  height: 420px;
+  background-color: white;
+}
+.letter-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  align-items: center;
+  text-align: center;
+  position: absolute;
+  top: 538px;
+  width: 490px;
+  height: 30px;
+  background-color: white;
+}
+p {
+  font-weight: bold;
+  font-family:'Courier New', Courier, monospace;
+  font-size: 1.3rem;
+}
+.letter {
+  width: 70px;
+}
 .row {
   display: flex;
   flex-direction: row;
   align-items: center;
 }
 .square {
+  display: block;
   width: 70px;
   height: 70px;
   background-color: blue;
@@ -43,4 +79,21 @@ body {
   border-radius: 100px;
   outline: 1px solid black;
   box-shadow: 2px 3px 2px;
+}
+.history-container {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  background-color: rgb(25, 20, 26);
+  position: absolute;
+  width: 1200px;
+  max-height: 800px;
+  left: 494px;
+  top: 118px;
+}
+.history-text {
+  margin-left: 10px;
+  font-size: 1rem;
+  display: block;
+  color: white;
 }

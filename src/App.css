@@ -7,7 +7,6 @@ body {
 .game {
   position: absolute;
   left: 80px;
-  outline: 1px solid black;
 }
 .game-over {
   color: white;
@@ -133,9 +132,12 @@ p {
     font-size: 1rem;
   }
   .history-container {
-    width: 380px;
+    width: 370px;
     max-height: 200px;
     left: -20px;
     top: 430px;
+  }
+  .game {
+    left: 30px;
   }
 }

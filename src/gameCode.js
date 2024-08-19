@@ -56,7 +56,7 @@ export function getAllWinningLines(squares) {
     }
 
     return winningLines;
-}
+};
 
 const isAllSquaresFilled = ((squares) => {
     for (const row of squares) {
@@ -68,6 +68,7 @@ const isAllSquaresFilled = ((squares) => {
     }
     return true;
 });
+
 export const checkGameOver = (squares) => {
     if (isAllSquaresFilled(squares)) {
         return 2;
@@ -80,3 +81,49 @@ export const checkGameOver = (squares) => {
     }
     return 0;
 } 
+const evaluateLine = (line, maximizingPlayer) => {
+    let maxPlayerCount = line.filter(square => square === maximizingPlayer).length;
+    let minPlayerCount = line.filter(square => square !== maximizingPlayer && square !== 0).length;
+  
+    if (maxPlayerCount === 4) return 100000;
+    if (minPlayerCount === 4) return 100000;
+    if (maxPlayerCount === 3 && minPlayerCount === 0) return 100;
+    if (maxPlayerCount === 2 && minPlayerCount === 0) return 10;
+  
+    if (minPlayerCount === 3 && maxPlayerCount === 0) return -100;
+    if (minPlayerCount === 2 && maxPlayerCount === 0) return -10;
+  
+    return 0;
+  };
+
+  export const evaluateBoardScore = (squares, maximizingPlayer) => {
+    let score = 0;
+    
+    let allWinningLines = getAllWinningLines(squares);
+    for (let line of allWinningLines) {
+      score += evaluateLine(line, maximizingPlayer);
+    }
+
+    let centerColumn = squares.map((row) => row[Math.floor(squares[0].length /2)]);
+    let centerCount = centerColumn.filter(piece => piece === maximizingPlayer).length;
+    score += centerCount * 5;
+  
+    return score;
+  };
+  
+  export const getHighestEvalIndex = (arr) => {
+    let highestEval = -Infinity;
+    let highestIndicies = [];
+
+    arr.forEach((score, index) => {
+        if (score > highestEval) {
+            highestEval = score;
+            highestIndicies.length = 0;
+            highestIndicies.push(index);
+        } else if (score === highestEval) {
+            highestIndicies.push(index);
+        } 
+    });
+    const random = parseInt(Math.random() * highestIndicies.length);
+    return highestIndicies[random];
+  };

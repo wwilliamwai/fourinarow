@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { checkGameOver} from './gameCode.js'
+import React, { useEffect, useState } from 'react';
+import { getHighestEvalIndex, evaluateBoardScore, checkGameOver} from './gameCode.js'
 import './App.css';
 
-const MAX_DEPTH = 2;
+const MAX_DEPTH = 6;
 
 const Circle = (({onClick, color}) => {
   const pickCircleColor = (color) => {
@@ -24,35 +24,10 @@ const Square = (({onClick, color}) => {
   </div>
 });
 
-const evaluateLine = (line, maximizingPlayer) => {
-  let maxPlayerCount = line.filter(square => square === maximizingPlayer).length;
-  let minPlayerCount = line.filter(square => square !== minimizingPlayer && square !== 0).length;
-
-  if (maxPlayerCount === 4) return 100000;
-  if (minPlayerCount === 4) return 100000;
-  if (maxPlayerCount === 3 && minPlayerCount === 0) return 100;
-  if (maxPlayerCount === 2 && minPlayerCount === 0) return 10;
-
-  if (minPlayerCount === 3 && maxPlayerCount === 0) return -100;
-  if (minPlayerCount === 2 && maxPlayerCount === 0) return -10;
-
-  return 0;
-};
-const evaluateBoardScore = (squares, maximizingPlayer) => {
-  let score = 0;
-  
-  let allPotentialFours = getAllPotentialFours();
-  for (let line of allPotentialFours) {
-    score += evaluateLine(line, maximizingPlayer);
-  }
-
-  return score;
-};
 
 const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, setGameOver, updateHistory}) => {
   const rowToNumber = "654321"
   const colToLetter = "ABCDEFG";
-  let possibleMoves = [];
 
   const isMoveDoable = (rowIndex, columnIndex) => {
     if (rowIndex + 1 === squares.length ) {  
@@ -65,7 +40,8 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
     return true;
   };
 
-  const fillPossibleMoves = (squares) => {
+  const getAllPossibleMoves = (squares) => {
+    const possibleMoves = [];
     for (let row = 0; row < squares.length; row++) {
       for (let col = 0; col < squares[0].length; col++) {
         if (isMoveDoable(row, col)) {
@@ -73,11 +49,15 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
         }
       }
     }
+    return possibleMoves;
   };
 
-  const makeMove = (squares, rowIndex, columnIndex) => {
+  const makeMove = (squares, rowIndex, columnIndex, isPlayerTurn) => {
     squares[rowIndex][columnIndex] = isPlayerTurn ? 1 : 2; 
-  }
+  };
+  const undoMove = (squares, rowIndex, columnIndex) => {
+    squares[rowIndex][columnIndex] = 0;
+  };
   const playerMove = ((rowIndex, columnIndex) => {
     if (isGameOver) {
       return;
@@ -86,12 +66,65 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
       return;
     }
     const copySquares = squares.map((row) => row.slice());
-    makeMove(copySquares, rowIndex, columnIndex);
+
+    makeMove(copySquares, rowIndex, columnIndex, true);
     updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(rowIndex));
     setGameOver(checkGameOver(copySquares));
     setSquares(copySquares);
     setPlayerTurn(!isPlayerTurn);
   });
+
+  const minimax = (squares, possibleMoves, depth, maximizingPlayer) => {
+    const iterablePossibleMoves = [...possibleMoves];
+    const color = maximizingPlayer ? 2 : 1;
+    if (depth == MAX_DEPTH || checkGameOver(squares)) {
+        return evaluateBoardScore(squares, color);
+    }
+    const possibleMoveEval = [];
+    
+    if (maximizingPlayer) {
+        let maxEval = -Infinity;
+        for (const move of iterablePossibleMoves) {
+            // maximizing player is always yellow. you want isPlayerTurn to be false so it would always make a yellow move
+            makeMove(squares, move[0], move[1], false);
+            maxEval = Math.max(maxEval, minimax(squares, getAllPossibleMoves(squares), depth + 1, false));
+            if (depth === 0) {
+              possibleMoveEval.push(maxEval);
+            }
+            undoMove(squares, move[0], move[1]);
+        }
+        if (depth > 0) {
+          return maxEval;
+        }
+    } else {
+      let minEval = Infinity;
+      for (const move of iterablePossibleMoves) {
+        makeMove(squares, move[0], move[1], true);
+        minEval = Math.min(minEval, minimax(squares, getAllPossibleMoves(squares), depth + 1, true));
+        undoMove(squares, move[0], move[1]);
+      }
+      return minEval;
+    }
+    const index = getHighestEvalIndex(possibleMoveEval);
+    return index
+  };
+
+  const aiMove = () => {
+    const copySquares = squares.map((row) => row.slice());
+    const possibleMoves = getAllPossibleMoves(copySquares);
+    const moveIndex = minimax(copySquares, possibleMoves, 0, true);
+    const move = possibleMoves[moveIndex];
+    makeMove(copySquares, move[0], move[1], isPlayerTurn);
+    updateHistory(colToLetter.charAt(move[1]) + rowToNumber.charAt(move[0]));
+    setGameOver(checkGameOver(copySquares));
+    setSquares(copySquares);
+    setPlayerTurn(!isPlayerTurn);
+  };
+
+  useEffect(() => {
+    if (!isPlayerTurn && isGameOver === 0) {
+      aiMove();
+    }},[isPlayerTurn, isGameOver]);
 
     return (
       <> 

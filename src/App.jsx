@@ -1,14 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { getHighestEvalIndex, evaluateBoardScore, checkGameOver} from './gameCode.js'
+import { scorePosition, getHighestEvalMove, evaluateBoardScore, checkGameOver} from './gameCode.js';
 import './App.css';
 
-const MAX_DEPTH = 6;
+const EMPTY = 0;
+const PLAYER = 1;
+const AI = 2;
+
+const gameIsGoing = 0;
+const gameWon = 1;
+
+const MAX_DEPTH = 4;
+
 
 const Circle = (({onClick, color}) => {
   const pickCircleColor = (color) => {
-    if (color === 0) {
+    if (color === EMPTY) {
       return 'whitesmoke'
-    } else if (color === 1) {
+    } else if (color === PLAYER) {
       return 'red';
     } else {
       return 'yellow';
@@ -19,11 +27,39 @@ const Circle = (({onClick, color}) => {
 }); 
 
 const Square = (({onClick, color}) => { 
-  return <div className="square" >
+  return <div onClick={onClick} className="square" >
     <Circle onClick={onClick} color={color}/>
   </div>
 });
 
+const CursorTracker = () => {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [visible, setVisible] = React.useState(true);
+
+  useEffect(() => {
+    const updatePosition = (event) => {
+      setPosition({ x: event.clientX, y: event.clientY });
+    };
+
+    window.addEventListener('mousemove', updatePosition);
+    window.addEventListener('click', hideOnCursor);
+
+    // Clean up the event listener on component unmount
+    return () => {
+      window.removeEventListener('mousemove', updatePosition);
+      window.removeEventListener('click', hideOnCursor);
+    };
+  }, []);
+
+  const hideOnCursor = () => {
+    setVisible(false);
+    setTimeout(() => {setVisible(true)}, 300);
+  };
+
+  return (
+    <div onClick={hideOnCursor} className="onCursor" style={{display: visible ? "inline" : "none", left: position.x, backgroundColor: "red"}}></div>
+  );
+};
 
 const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, setGameOver, updateHistory}) => {
   const rowToNumber = "654321"
@@ -31,13 +67,25 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
 
   const isMoveDoable = (rowIndex, columnIndex) => {
     if (rowIndex + 1 === squares.length ) {  
-      if (squares[rowIndex][columnIndex] !== 0) {
+      if (squares[rowIndex][columnIndex] !== EMPTY) {
         return false;
       }
-    } else if (squares[rowIndex + 1][columnIndex] === 0 || squares[rowIndex][columnIndex] !== 0) {
+    } else if (squares[rowIndex + 1][columnIndex] === EMPTY || squares[rowIndex][columnIndex] !== EMPTY) {
       return false;
     } 
     return true;
+  };
+
+  const getNextOpenRow = (rowIndex, columnIndex) => {
+    rowIndex = 0;
+    // if the top circle is full, then just return it (even though its unopen);
+    if (squares[rowIndex][columnIndex] !== EMPTY) {
+      return 0;
+    }
+    while (rowIndex < squares.length && squares[rowIndex][columnIndex] == EMPTY) {
+      rowIndex++; 
+    }
+    return rowIndex -1;
   };
 
   const getAllPossibleMoves = (squares) => {
@@ -53,32 +101,34 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
   };
 
   const makeMove = (squares, rowIndex, columnIndex, isPlayerTurn) => {
-    squares[rowIndex][columnIndex] = isPlayerTurn ? 1 : 2; 
+    squares[rowIndex][columnIndex] = isPlayerTurn ? PLAYER : AI; 
   };
   const undoMove = (squares, rowIndex, columnIndex) => {
-    squares[rowIndex][columnIndex] = 0;
+    squares[rowIndex][columnIndex] = EMPTY;
   };
   const playerMove = ((rowIndex, columnIndex) => {
-    if (isGameOver) {
+    if (isGameOver || !isPlayerTurn) {
       return;
     }
-    if (!isMoveDoable(rowIndex, columnIndex)) {
+    const openRow = getNextOpenRow(rowIndex, columnIndex);
+    if (!isMoveDoable(openRow, columnIndex)) {
       return;
     }
     const copySquares = squares.map((row) => row.slice());
 
-    makeMove(copySquares, rowIndex, columnIndex, true);
-    updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(rowIndex));
+    makeMove(copySquares, openRow, columnIndex, isPlayerTurn);
+    updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(openRow));
     setGameOver(checkGameOver(copySquares));
     setSquares(copySquares);
     setPlayerTurn(!isPlayerTurn);
   });
 
-  const minimax = (squares, possibleMoves, depth, maximizingPlayer) => {
+
+  /*const minimax = (squares, possibleMoves, depth, alpha, beta, maximizingPlayer) => {
     const iterablePossibleMoves = [...possibleMoves];
-    const color = maximizingPlayer ? 2 : 1;
-    if (depth == MAX_DEPTH || checkGameOver(squares)) {
-        return evaluateBoardScore(squares, color);
+    
+    if (depth === MAX_DEPTH || checkGameOver(squares)) {
+      return evaluateBoardScore(squares, maximizingPlayer);
     }
     const possibleMoveEval = [];
     
@@ -87,33 +137,63 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
         for (const move of iterablePossibleMoves) {
             // maximizing player is always yellow. you want isPlayerTurn to be false so it would always make a yellow move
             makeMove(squares, move[0], move[1], false);
-            maxEval = Math.max(maxEval, minimax(squares, getAllPossibleMoves(squares), depth + 1, false));
+            const scoreEval = minimax(squares, getAllPossibleMoves(squares), depth + 1, alpha, beta, false);
+            maxEval = Math.max(maxEval, scoreEval);
             if (depth === 0) {
-              possibleMoveEval.push(maxEval);
+              possibleMoveEval.push({move, scoreEval});
             }
             undoMove(squares, move[0], move[1]);
+
+            alpha = Math.max(alpha, maxEval);
+            if (beta <= alpha) {
+              break;
+            }
         }
-        if (depth > 0) {
+        if (depth !== 0) {
           return maxEval;
+        } else {
+          return getHighestEvalMove(possibleMoveEval);
         }
     } else {
       let minEval = Infinity;
       for (const move of iterablePossibleMoves) {
         makeMove(squares, move[0], move[1], true);
-        minEval = Math.min(minEval, minimax(squares, getAllPossibleMoves(squares), depth + 1, true));
+        const scoreEval = minimax(squares, getAllPossibleMoves(squares), depth + 1, alpha, beta, true);
+        minEval = Math.min(minEval, scoreEval);
         undoMove(squares, move[0], move[1]);
+
+        beta = Math.min(beta, minEval);
+        if (beta <= alpha) {
+          break;
+        }
       }
       return minEval;
     }
-    const index = getHighestEvalIndex(possibleMoveEval);
-    return index
-  };
+  }; */
+  const pickBestMove = (squares, color, possibleMoves) => {
+    let bestScore = -10000;
+    let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+
+    for (const move of possibleMoves) {
+      makeMove(squares, move[0], move[1], false);
+      const score = scorePosition(squares, color);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+    
+      }
+      undoMove(squares, move[0], move[1]);
+    } 
+    return bestMove;
+};
 
   const aiMove = () => {
     const copySquares = squares.map((row) => row.slice());
     const possibleMoves = getAllPossibleMoves(copySquares);
-    const moveIndex = minimax(copySquares, possibleMoves, 0, true);
-    const move = possibleMoves[moveIndex];
+    
+    const move = pickBestMove(copySquares, AI, possibleMoves);
+
     makeMove(copySquares, move[0], move[1], isPlayerTurn);
     updateHistory(colToLetter.charAt(move[1]) + rowToNumber.charAt(move[0]));
     setGameOver(checkGameOver(copySquares));
@@ -122,12 +202,13 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
   };
 
   useEffect(() => {
-    if (!isPlayerTurn && isGameOver === 0) {
-      aiMove();
-    }},[isPlayerTurn, isGameOver]);
+    if (!isPlayerTurn && isGameOver === gameIsGoing) {
+      setTimeout(aiMove, 500);
+    }},[isPlayerTurn, isGameOver]); 
 
     return (
       <> 
+        <CursorTracker/>
         {squares.map((row, rowIndex) => 
         (
           <div key={rowIndex} className="row">
@@ -141,10 +222,11 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
   );
 }); 
 
+
 const Game = () => {
   // 0 is white, 1 is player, 2 is ai
-  const [squares, setSquares] = useState(Array(6).fill().map(() => Array(7).fill(0)));
-  const [isPlayerTurn, setPlayerTurn] = useState(true);
+  const [squares, setSquares] = useState(Array(6).fill().map(() => Array(7).fill(EMPTY)));
+  const [isPlayerTurn, setPlayerTurn] = useState(Math.random() < 0.5 ? true : false);
   // 0 is nothing, 1 is game won, 2 is draw
   const [isGameOver, setGameOver] = useState(0);
   const [moveHistory, setHistory] = useState([]);
@@ -156,9 +238,9 @@ const Game = () => {
   }
 
   const displayGameOverText = () => {
-    if (isGameOver === 0) {
+    if (isGameOver === gameIsGoing) {
       return "";
-    } else if (isGameOver === 1) {
+    } else if (isGameOver === gameWon) {
       return isPlayerTurn ? <h1 className="game-over yellow">Yellow Wins!</h1> : <h1 className="game-over red">Red Wins!</h1>;
     } else {
       return <h1 className="game-over">Game was a Draw!</h1>;

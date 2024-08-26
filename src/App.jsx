@@ -1,22 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { scorePosition, getHighestEvalMove, evaluateBoardScore, checkGameOver} from './gameCode.js';
+import { didPieceWin, scorePosition, checkGameOver} from './gameCode.js';
 import './App.css';
 
 const EMPTY = 0;
-const PLAYER = 1;
-const AI = 2;
+const PLAYER_PIECE = 1;
+const AI_PIECE = 2;
 
 const gameIsGoing = 0;
 const gameWon = 1;
-
-const MAX_DEPTH = 4;
 
 
 const Circle = (({onClick, color}) => {
   const pickCircleColor = (color) => {
     if (color === EMPTY) {
       return 'whitesmoke'
-    } else if (color === PLAYER) {
+    } else if (color === PLAYER_PIECE) {
       return 'red';
     } else {
       return 'yellow';
@@ -101,7 +99,7 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
   };
 
   const makeMove = (squares, rowIndex, columnIndex, isPlayerTurn) => {
-    squares[rowIndex][columnIndex] = isPlayerTurn ? PLAYER : AI; 
+    squares[rowIndex][columnIndex] = isPlayerTurn ? PLAYER_PIECE : AI_PIECE; 
   };
   const undoMove = (squares, rowIndex, columnIndex) => {
     squares[rowIndex][columnIndex] = EMPTY;
@@ -117,85 +115,102 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
     const copySquares = squares.map((row) => row.slice());
 
     makeMove(copySquares, openRow, columnIndex, isPlayerTurn);
-    updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(openRow));
+    updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(openRow), isPlayerTurn);
     setGameOver(checkGameOver(copySquares));
     setSquares(copySquares);
     setPlayerTurn(!isPlayerTurn);
   });
 
+  const minimax = (squares, depth, alpha, beta, maximizingPlayer) => {
+    const possibleMoves = getAllPossibleMoves(squares);
 
-  /*const minimax = (squares, possibleMoves, depth, alpha, beta, maximizingPlayer) => {
-    const iterablePossibleMoves = [...possibleMoves];
-    
-    if (depth === MAX_DEPTH || checkGameOver(squares)) {
-      return evaluateBoardScore(squares, maximizingPlayer);
+    // Base case
+    if (depth === 0 || checkGameOver(squares) !== 0) {
+        if (checkGameOver(squares) !== 0) {
+            if (didPieceWin(squares, AI_PIECE)) {
+              console.log("ai won");
+                return { move: [], score: 1000000000 }; // AI wins
+            } else if (didPieceWin(squares, PLAYER_PIECE)) {
+              console.log("player won");
+                return { move: [], score: -1000000000 }; // Player wins
+            } else {
+                console.log("there was a draw");
+                return { move: [], score: 0 }; // Draw
+            }
+        } else {
+          console.log(" this is the evaluation of the dpeth 0: " + scorePosition(squares, AI_PIECE));
+          return { move: [], score: scorePosition(squares, AI_PIECE) }; // Evaluation if game was still going
+        }
     }
-    const possibleMoveEval = [];
-    
     if (maximizingPlayer) {
         let maxEval = -Infinity;
-        for (const move of iterablePossibleMoves) {
-            // maximizing player is always yellow. you want isPlayerTurn to be false so it would always make a yellow move
-            makeMove(squares, move[0], move[1], false);
-            const scoreEval = minimax(squares, getAllPossibleMoves(squares), depth + 1, alpha, beta, false);
-            maxEval = Math.max(maxEval, scoreEval);
-            if (depth === 0) {
-              possibleMoveEval.push({move, scoreEval});
-            }
-            undoMove(squares, move[0], move[1]);
+        let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
 
+        for (const move of possibleMoves) {
+            const copySquares = squares.map(row => row.slice());
+            makeMove(copySquares, move[0], move[1], false);
+            const scoreEval = minimax(copySquares, depth - 1, alpha, beta, false).score;
+
+            if (scoreEval > maxEval) {
+                maxEval = scoreEval;
+                bestMove = move;
+            }
             alpha = Math.max(alpha, maxEval);
-            if (beta <= alpha) {
+            if (alpha >= beta) {
               break;
             }
         }
-        if (depth !== 0) {
-          return maxEval;
-        } else {
-          return getHighestEvalMove(possibleMoveEval);
-        }
+        console.log(`on depth ${depth} we have a maxEval of ${maxEval} and we are doing move [${bestMove[0]}, ${bestMove[1]}]`);
+        return { move: bestMove, score: maxEval };
     } else {
-      let minEval = Infinity;
-      for (const move of iterablePossibleMoves) {
-        makeMove(squares, move[0], move[1], true);
-        const scoreEval = minimax(squares, getAllPossibleMoves(squares), depth + 1, alpha, beta, true);
-        minEval = Math.min(minEval, scoreEval);
-        undoMove(squares, move[0], move[1]);
+        let minEval = Infinity;
+        let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
 
-        beta = Math.min(beta, minEval);
-        if (beta <= alpha) {
-          break;
+        for (const move of possibleMoves) {
+            const copySquares = squares.map(row => row.slice());
+            makeMove(copySquares, move[0], move[1], true);
+            const scoreEval = minimax(copySquares, depth - 1, alpha, beta, true).score;
+
+            if (scoreEval < minEval) {
+                minEval = scoreEval;
+                bestMove = move;
+            }
+            beta = Math.min(beta, minEval);
+            if (alpha >= beta) {
+              break;
+            }
         }
-      }
-      return minEval;
+        console.log(`on depth ${depth} we have a minEval of ${minEval} and we are doing move [${bestMove[0]}, ${bestMove[1]}]`);
+        return { move: bestMove, score: minEval };
     }
-  }; */
-  const pickBestMove = (squares, color, possibleMoves) => {
-    let bestScore = -10000;
-    let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+};
 
-    for (const move of possibleMoves) {
-      makeMove(squares, move[0], move[1], false);
-      const score = scorePosition(squares, color);
+const pickBestMove = (squares, color, possibleMoves) => {
+  let bestScore = -10000;
+  let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
 
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
-    
-      }
-      undoMove(squares, move[0], move[1]);
-    } 
-    return bestMove;
+  for (const move of possibleMoves) {
+    makeMove(squares, move[0], move[1], false);
+    const score = scorePosition(squares, color);
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = move;
+  
+    }
+    undoMove(squares, move[0], move[1]);
+  } 
+  return bestMove;
 };
 
   const aiMove = () => {
     const copySquares = squares.map((row) => row.slice());
-    const possibleMoves = getAllPossibleMoves(copySquares);
     
-    const move = pickBestMove(copySquares, AI, possibleMoves);
+    const move = pickBestMove(squares, AI_PIECE, getAllPossibleMoves(squares));
+    //const move = minimax(copySquares, 5, -Infinity, Infinity, true).move;
 
     makeMove(copySquares, move[0], move[1], isPlayerTurn);
-    updateHistory(colToLetter.charAt(move[1]) + rowToNumber.charAt(move[0]));
+    updateHistory(colToLetter.charAt(move[1]) + rowToNumber.charAt(move[0], isPlayerTurn));
     setGameOver(checkGameOver(copySquares));
     setSquares(copySquares);
     setPlayerTurn(!isPlayerTurn);
@@ -231,9 +246,10 @@ const Game = () => {
   const [isGameOver, setGameOver] = useState(0);
   const [moveHistory, setHistory] = useState([]);
 
-  const updateHistory = (moveLocation) => {
+  const updateHistory = (moveLocation, isPlayerTurn) => {
+    const color = isPlayerTurn ? 1 : 2;
     const copyHistory = moveHistory.slice();
-    copyHistory.push(moveLocation);
+    copyHistory.push([moveLocation, color]);
     setHistory(copyHistory);
   }
 
@@ -254,6 +270,10 @@ const Game = () => {
       return isPlayerTurn ? <h1 className = "next-player">Next Player: <span className="red">Red</span></h1> : <h1 className="next-player">Next Player: <span className="yellow">Yellow</span></h1>;
     }
   };
+
+  const displayHistoryText = () => moveHistory.map((history, index) => <p className="history-text"key={index}>{index + 1} 
+    {history[1] === 1 ? <span className="red"> Red</span> : <span className="yellow"> Yellow</span>} has placed a token on
+    <span className="blue"> {history[0]}</span></p>).reverse();
 
   return (
     <>
@@ -281,9 +301,7 @@ const Game = () => {
          <Board squares={squares} setSquares={setSquares} isPlayerTurn={isPlayerTurn} setPlayerTurn={setPlayerTurn} isGameOver={isGameOver} setGameOver={setGameOver} updateHistory={updateHistory}/>
       </div>
       <div className="history-container">
-      {moveHistory.map((moveLocation, index) => 
-        <p className="history-text"key={index}>{index + 1}. {index % 2 === 0 ? <span className="red">Red</span> : <span className="yellow">Yellow</span>} has placed a token on <span className="blue">{moveLocation}</span></p>
-      ).reverse()}
+      {displayHistoryText()}
       </div>
     </div>
     </>

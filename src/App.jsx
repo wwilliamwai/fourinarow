@@ -157,10 +157,10 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
                 maxEval = scoreEval;
                 bestMove = move;
             }
-            /* alpha = Math.max(alpha, maxEval);
+            alpha = Math.max(alpha, maxEval);
             if (alpha >= beta) {
               break;
-            } */
+            }
         }
         return { move: bestMove, score: maxEval };
     // checking the best
@@ -177,14 +177,14 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
                 minEval = scoreEval;
                 bestMove = move;
             }
-            /* beta = Math.min(beta, minEval);
+            beta = Math.min(beta, minEval);
             if (alpha >= beta) {
-              break; */
+              break;
             }
         return { move: bestMove, score: minEval };
       }
     };
-const pickBestMove = (squares, color, possibleMoves) => {
+/* const pickBestMove = (squares, color, possibleMoves) => {
   let bestScore = -10000;
   let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
 
@@ -200,7 +200,7 @@ const pickBestMove = (squares, color, possibleMoves) => {
     undoMove(squares, move[0], move[1]);
   } 
   return bestMove;
-};
+}; */
 
   const aiMove = () => {
     const copySquares = squares.map((row) => row.slice());

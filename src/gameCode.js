@@ -89,7 +89,7 @@ const evaluateLine = (line) => {
     }
 
     if (opponentPieceNum === 3 && emptyPieceNum === 1) {
-        score -= 80;
+        score -= 4;
     }
     return score;
 };

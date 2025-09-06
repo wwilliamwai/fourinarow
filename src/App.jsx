@@ -181,9 +181,10 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
             if (alpha >= beta) {
               break;
             }
-        return { move: bestMove, score: minEval };
       }
-    };
+      return { move: bestMove, score: minEval };
+    }
+  };
 /* const pickBestMove = (squares, color, possibleMoves) => {
   let bestScore = -10000;
   let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
@@ -206,7 +207,7 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
     const copySquares = squares.map((row) => row.slice());
     
     // const move = pickBestMove(squares, AI_PIECE, getAllPossibleMoves(squares));
-    const move = minimax(copySquares, 3, -Infinity, Infinity, true).move;
+    const move = minimax(copySquares, 4, -Infinity, Infinity, true).move;
 
     // not player's turn, so it sets move and history for ai
     makeMove(copySquares, move[0], move[1], /* isPlayerTurn = */ false); // always AI

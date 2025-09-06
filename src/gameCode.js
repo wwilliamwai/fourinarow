@@ -105,7 +105,7 @@ export const scorePosition = (squares) => {
         centerLine.push(squares[row][centerColumn]);
     }
     const centerCount = centerLine.filter((square) => square === color).length;
-    score += centerCount * 6;
+    score += centerCount * 3;
 
     // horizontal score
     for (let row = 0; row < squares.length; row++) {

@@ -49,7 +49,7 @@ export const didPieceWin = (squares, color) => {
     }
     // upward diagonal
     for (let row = 3; row < squares.length; row++) {
-        for (let col = 0; col < squares.length - 3; col++) {
+        for (let col = 0; col < squares[0].length - 3; col++) {
             if (squares[row][col] === color && squares[row - 1][col + 1] === color && squares[row - 2][col + 2] === color 
                 && squares[row - 3][col + 3] === color) {
                     return true;
@@ -60,55 +60,58 @@ export const didPieceWin = (squares, color) => {
 };
 
 export const checkGameOver = (squares) => {
-    if (isAllSquaresFilled(squares)) {
-        return gameDrawn;
-    } else if (didPieceWin(squares, PLAYER_PIECE)) {
+    if (didPieceWin(squares, PLAYER_PIECE)) {
         return gameWon;
     } else if (didPieceWin(squares, AI_PIECE)) {
         return gameWon;
     }
+    else if (isAllSquaresFilled(squares)) {
+        return gameDrawn;
+    } 
     return gameIsGoing;
 } 
 
-const evaluateLine = (line, color) => {
+const evaluateLine = (line) => {
     let score = 0;
-    const opponentColor = color === AI_PIECE ? PLAYER_PIECE : AI_PIECE;
+    const playerColor = AI_PIECE;
+    const opponentColor = PLAYER_PIECE;
 
-    const playerPieceNum = line.filter((square) => square === color).length;
+    const playerPieceNum = line.filter((square) => square === playerColor).length;
     const opponentPieceNum = line.filter((square) => square === opponentColor).length;
     const emptyPieceNum = line.filter((square) => square === EMPTY).length;
 
     if (playerPieceNum === 4) {
         score += 100;
     } else if (playerPieceNum === 3 && emptyPieceNum === 1) {
-        score += 5;
+        score += 10;
     } else if (playerPieceNum == 2 && emptyPieceNum === 2) {
-        score += 2;
+        score += 5;
     }
 
     if (opponentPieceNum === 3 && emptyPieceNum === 1) {
-        score -= 4;
+        score -= 80;
     }
     return score;
 };
 
-export const scorePosition = (squares, color) => {
+export const scorePosition = (squares) => {
     let score = 0;
+    const color = AI_PIECE;
 
     // score center column
     const centerLine = [];
-    const centerColumn = Math.floor(squares.length/2);
+    const centerColumn = Math.floor(squares[0].length/2);
     for (let row = 0; row < squares.length; row++) {
         centerLine.push(squares[row][centerColumn]);
     }
     const centerCount = centerLine.filter((square) => square === color).length;
-    score += centerCount * 3;
+    score += centerCount * 6;
 
     // horizontal score
     for (let row = 0; row < squares.length; row++) {
         for (let col = 0; col < squares[0].length - 3; col++ ) {
             const line = [squares[row][col], squares[row][col + 1], squares[row][col + 2], squares[row][col + 3]];
-            score += evaluateLine(line, color);
+            score += evaluateLine(line);
         }
     }
 
@@ -116,21 +119,21 @@ export const scorePosition = (squares, color) => {
     for (let col = 0; col < squares[0].length; col++) {
         for (let row = 0; row < squares.length - 3; row++) {
             const line = [squares[row][col], squares[row + 1][col], squares[row + 2][col], squares[row + 3][col]];
-            score += evaluateLine(line, color);
+            score += evaluateLine(line);
         }
     }
     // downward diagonal
     for (let row = 0; row < squares.length - 3; row++) {
         for (let col = 0; col < squares[0].length - 3; col++) {
             const line = [squares[row][col], squares[row + 1][col + 1], squares[row + 2][col + 2], squares[row + 3][col + 3]];
-            score += evaluateLine(line, color);
+            score += evaluateLine(line);
         }
     }
     // upward diagonal
     for (let row = 3; row < squares.length; row++) {
-        for (let col = 0; col < squares.length - 3; col++) {
+        for (let col = 0; col < squares[0].length - 3; col++) {
             const line = [squares[row][col], squares[row - 1][col + 1], squares[row - 2][col + 2], squares[row - 3][col + 3]];
-            score += evaluateLine(line, color);
+            score += evaluateLine(line);
         }
     }
     return score;

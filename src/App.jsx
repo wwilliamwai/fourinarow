@@ -63,22 +63,24 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
   const rowToNumber = "654321"
   const colToLetter = "ABCDEFG";
 
-  const isMoveDoable = (rowIndex, columnIndex) => {
-    if (rowIndex + 1 === squares.length ) {  
-      if (squares[rowIndex][columnIndex] !== EMPTY) {
+  const isMoveDoable = (squares, rowIndex, columnIndex) => {
+    // if you're on the very bottom row, but there's already a circle there
+    if (rowIndex + 1 === squares.length) {
+      if (squares[rowIndex][columnIndex] !== EMPTY) {  
         return false;
-      }
-    } else if (squares[rowIndex + 1][columnIndex] === EMPTY || squares[rowIndex][columnIndex] !== EMPTY) {
+      } 
+    // if the square under is empty, or the square you're trying to take is already filled
+    }else if (squares[rowIndex + 1][columnIndex] === EMPTY || squares[rowIndex][columnIndex] !== EMPTY) {
       return false;
     } 
     return true;
   };
 
-  const getNextOpenRow = (rowIndex, columnIndex) => {
+  const getNextOpenRow = (squares, rowIndex, columnIndex) => {
     rowIndex = 0;
     // if the top circle is full, then just return it (even though its unopen);
     if (squares[rowIndex][columnIndex] !== EMPTY) {
-      return 0;
+      return rowIndex;
     }
     while (rowIndex < squares.length && squares[rowIndex][columnIndex] == EMPTY) {
       rowIndex++; 
@@ -86,17 +88,18 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
     return rowIndex -1;
   };
 
-  const getAllPossibleMoves = (squares) => {
-    const possibleMoves = [];
-    for (let row = 0; row < squares.length; row++) {
-      for (let col = 0; col < squares[0].length; col++) {
-        if (isMoveDoable(row, col)) {
-          possibleMoves.push([row, col]);
-        }
+  const getAllPossibleMoves = (board) => {
+  const moves = [];
+  for (let col = 0; col < board[0].length; col++) {
+    for (let row = board.length - 1; row >= 0; row--) {
+      if (board[row][col] === EMPTY) {
+        moves.push([row, col]); // only the lowest empty
+        break;
       }
     }
-    return possibleMoves;
-  };
+  }
+  return moves;
+};
 
   const makeMove = (squares, rowIndex, columnIndex, isPlayerTurn) => {
     squares[rowIndex][columnIndex] = isPlayerTurn ? PLAYER_PIECE : AI_PIECE; 
@@ -108,11 +111,11 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
     if (isGameOver || !isPlayerTurn) {
       return;
     }
-    const openRow = getNextOpenRow(rowIndex, columnIndex);
-    if (!isMoveDoable(openRow, columnIndex)) {
+    const copySquares = squares.map((row) => row.slice());
+    const openRow = getNextOpenRow(copySquares, rowIndex, columnIndex);
+    if (!isMoveDoable(copySquares, openRow, columnIndex)) {
       return;
     }
-    const copySquares = squares.map((row) => row.slice());
 
     makeMove(copySquares, openRow, columnIndex, isPlayerTurn);
     updateHistory(colToLetter.charAt(columnIndex) + rowToNumber.charAt(openRow), isPlayerTurn);
@@ -122,26 +125,25 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
   });
 
   const minimax = (squares, depth, alpha, beta, maximizingPlayer) => {
-    const possibleMoves = getAllPossibleMoves(squares);
 
     // Base case
-    if (depth === 0 || checkGameOver(squares) !== 0) {
-        if (checkGameOver(squares) !== 0) {
+    const status = checkGameOver(squares);
+    if (depth === 0 || status != 0) {
+        if (status !== 0) {
             if (didPieceWin(squares, AI_PIECE)) {
-              console.log("ai won");
-                return { move: [], score: 1000000000 }; // AI wins
+                return { move: [], score: 999999999 }; // AI wins
             } else if (didPieceWin(squares, PLAYER_PIECE)) {
-              console.log("player won");
-                return { move: [], score: -1000000000 }; // Player wins
+                return { move: [], score: -999999999 }; // Player wins
             } else {
-                console.log("there was a draw");
                 return { move: [], score: 0 }; // Draw
             }
         } else {
-          console.log(" this is the evaluation of the dpeth 0: " + scorePosition(squares, AI_PIECE));
-          return { move: [], score: scorePosition(squares, AI_PIECE) }; // Evaluation if game was still going
+          return { move: [], score: scorePosition(squares) }; // Evaluation if game was still going
         }
     }
+  
+    const possibleMoves = getAllPossibleMoves(squares);
+    // checking the best possible move from the ai's point of view
     if (maximizingPlayer) {
         let maxEval = -Infinity;
         let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
@@ -155,13 +157,13 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
                 maxEval = scoreEval;
                 bestMove = move;
             }
-            alpha = Math.max(alpha, maxEval);
+            /* alpha = Math.max(alpha, maxEval);
             if (alpha >= beta) {
               break;
-            }
+            } */
         }
-        console.log(`on depth ${depth} we have a maxEval of ${maxEval} and we are doing move [${bestMove[0]}, ${bestMove[1]}]`);
         return { move: bestMove, score: maxEval };
+    // checking the best
     } else {
         let minEval = Infinity;
         let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
@@ -175,16 +177,13 @@ const Board = (({squares, setSquares, isPlayerTurn, setPlayerTurn, isGameOver, s
                 minEval = scoreEval;
                 bestMove = move;
             }
-            beta = Math.min(beta, minEval);
+            /* beta = Math.min(beta, minEval);
             if (alpha >= beta) {
-              break;
+              break; */
             }
-        }
-        console.log(`on depth ${depth} we have a minEval of ${minEval} and we are doing move [${bestMove[0]}, ${bestMove[1]}]`);
         return { move: bestMove, score: minEval };
-    }
-};
-
+      }
+    };
 const pickBestMove = (squares, color, possibleMoves) => {
   let bestScore = -10000;
   let bestMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
@@ -206,11 +205,12 @@ const pickBestMove = (squares, color, possibleMoves) => {
   const aiMove = () => {
     const copySquares = squares.map((row) => row.slice());
     
-    const move = pickBestMove(squares, AI_PIECE, getAllPossibleMoves(squares));
-    //const move = minimax(copySquares, 5, -Infinity, Infinity, true).move;
+    // const move = pickBestMove(squares, AI_PIECE, getAllPossibleMoves(squares));
+    const move = minimax(copySquares, 3, -Infinity, Infinity, true).move;
 
-    makeMove(copySquares, move[0], move[1], isPlayerTurn);
-    updateHistory(colToLetter.charAt(move[1]) + rowToNumber.charAt(move[0], isPlayerTurn));
+    // not player's turn, so it sets move and history for ai
+    makeMove(copySquares, move[0], move[1], /* isPlayerTurn = */ false); // always AI
+    updateHistory(colToLetter.charAt(move[1]) + rowToNumber.charAt(move[0]), /* isPlayerTurn */ false);
     setGameOver(checkGameOver(copySquares));
     setSquares(copySquares);
     setPlayerTurn(!isPlayerTurn);
@@ -219,7 +219,7 @@ const pickBestMove = (squares, color, possibleMoves) => {
   useEffect(() => {
     if (!isPlayerTurn && isGameOver === gameIsGoing) {
       setTimeout(aiMove, 500);
-    }},[isPlayerTurn, isGameOver]); 
+    }}, [isPlayerTurn, isGameOver,]); 
 
     return (
       <> 
